@@ -24,6 +24,7 @@ import creditdefault as cd  # pakai fungsi yang sudah kamu buat
 
 
 # Streamlit page config
+
 st.set_page_config(
     page_title="Credit Default Explorer",
     layout="wide",
@@ -113,13 +114,13 @@ st.dataframe(raw_df.head(), use_container_width=True)
 
 st.header("2. Exploratory Data Analysis")
 
-# Define orange–green palette
+# Orange–green palette
 GREEN = "#2ecc71"
 ORANGE = "#e67e22"
 PALETTE = [GREEN, ORANGE]
 
 
-#  Overview tables
+# 2.1 Overview tables
 col1, col2 = st.columns(2)
 
 with col1:
@@ -146,6 +147,7 @@ def plot_hist(series, title, xlabel):
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel("Count")
+    fig.tight_layout()
     st.pyplot(fig)
 
 
@@ -158,105 +160,184 @@ def plot_bar(counts, title, xlabel, ylabel, horizontal=False, color=ORANGE):
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    fig.tight_layout()
     st.pyplot(fig)
 
 
-# Numeric distributions
-st.subheader("2.1 Numeric distributions")
+# 2.2 Numeric distributions
+st.subheader("2.2 Numeric distributions")
 
 num_cols = ["loan_amount", "installment_amount", "paid_amount", "dpd"]
 for i in range(0, len(num_cols), 2):
     c1, c2 = st.columns(2)
-    for j, col in enumerate(num_cols[i:i+2]):
+    for j, col in enumerate(num_cols[i:i + 2]):
         if col in raw_df.columns:
             with (c1 if j == 0 else c2):
                 plot_hist(raw_df[col], f"Distribution of {col}", col)
 
-# Top categorical columns
-st.subheader("2.2 Top categorical features")
 
-cat_cols = ["address_provinsi", "loan_purpose", "marital_status",
-            "job_type", "job_industry", "dependent"]
+# 2.3 Categorical distributions
+st.subheader("2.3 Categorical distributions")
+
+cat_cols = [
+    "address_provinsi",
+    "loan_purpose",
+    "marital_status",
+    "job_type",
+    "job_industry",
+    "dependent",
+]
+
 for col in cat_cols:
     if col in raw_df.columns:
         counts = raw_df[col].value_counts().head(10)
         with st.expander(f"Distribution of {col}", expanded=False):
-            plot_bar(counts.sort_values(ascending=True),
-                     f"{col} (top 10)", col, "Count", horizontal=True, color=ORANGE)
+            plot_bar(
+                counts.sort_values(ascending=True),
+                f"{col} (top 10)",
+                col,
+                "Count",
+                horizontal=True,
+                color=ORANGE,
+            )
 
-# Relationships
-st.subheader("2.3 Relationships between variables")
+
+# 2.4 Relationships between variables
+st.subheader("2.4 Relationships between variables")
 
 r1, r2 = st.columns(2)
 with r1:
     if {"loan_amount", "installment_amount"} <= set(raw_df.columns):
         fig, ax = plt.subplots(figsize=(5, 3))
-        ax.scatter(raw_df["loan_amount"], raw_df["installment_amount"],
-                   alpha=0.5, color=GREEN, s=10)
+        ax.scatter(
+            raw_df["loan_amount"],
+            raw_df["installment_amount"],
+            alpha=0.5,
+            color=GREEN,
+            s=10,
+        )
         ax.set_title("Loan vs Installment Amount")
         ax.set_xlabel("loan_amount")
         ax.set_ylabel("installment_amount")
+        fig.tight_layout()
         st.pyplot(fig)
 with r2:
     if {"installment_amount", "paid_amount"} <= set(raw_df.columns):
         fig, ax = plt.subplots(figsize=(5, 3))
-        ax.scatter(raw_df["installment_amount"], raw_df["paid_amount"],
-                   alpha=0.5, color=ORANGE, s=10)
+        ax.scatter(
+            raw_df["installment_amount"],
+            raw_df["paid_amount"],
+            alpha=0.5,
+            color=ORANGE,
+            s=10,
+        )
         ax.set_title("Installment vs Paid Amount")
         ax.set_xlabel("installment_amount")
         ax.set_ylabel("paid_amount")
+        fig.tight_layout()
         st.pyplot(fig)
 
 r3, r4 = st.columns(2)
 with r3:
     if {"dpd", "loan_amount"} <= set(raw_df.columns):
         fig, ax = plt.subplots(figsize=(5, 3))
-        ax.scatter(raw_df["loan_amount"], raw_df["dpd"],
-                   alpha=0.4, color=ORANGE, s=10)
+        ax.scatter(
+            raw_df["loan_amount"],
+            raw_df["dpd"],
+            alpha=0.4,
+            color=ORANGE,
+            s=10,
+        )
         ax.set_title("DPD vs Loan Amount")
         ax.set_xlabel("loan_amount")
         ax.set_ylabel("dpd")
+        fig.tight_layout()
         st.pyplot(fig)
+
 with r4:
     if {"loan_amount", "marital_status"} <= set(raw_df.columns):
         fig, ax = plt.subplots(figsize=(6, 3))
-        subset = raw_df[raw_df["marital_status"].isin(
-            raw_df["marital_status"].value_counts().head(5).index)]
-        subset.boxplot(column="loan_amount", by="marital_status",
-                       ax=ax, grid=False, patch_artist=True,
-                       boxprops=dict(facecolor=GREEN, alpha=0.5))
+        top_cat = raw_df["marital_status"].value_counts().head(5).index
+        subset = raw_df[raw_df["marital_status"].isin(top_cat)]
+        subset.boxplot(
+            column="loan_amount",
+            by="marital_status",
+            ax=ax,
+            grid=False,
+            patch_artist=True,
+            boxprops=dict(facecolor=GREEN, alpha=0.5),
+        )
         plt.suptitle("")
         ax.set_title("Loan Amount by Marital Status")
+        # rapikan label x
+        ax.set_xlabel("marital_status")
+        ax.set_ylabel("loan_amount")
+        ax.set_xticklabels(
+            ax.get_xticklabels(),
+            rotation=20,
+            ha="right",
+            fontsize=8,
+        )
+        fig.tight_layout()
         st.pyplot(fig)
 
 r5, r6 = st.columns(2)
 with r5:
     if {"loan_amount", "loan_purpose"} <= set(raw_df.columns):
-        fig, ax = plt.subplots(figsize=(6, 3))
-        subset = raw_df[raw_df["loan_purpose"].isin(
-            raw_df["loan_purpose"].value_counts().head(5).index)]
-        subset.boxplot(column="loan_amount", by="loan_purpose",
-                       ax=ax, grid=False, patch_artist=True,
-                       boxprops=dict(facecolor=ORANGE, alpha=0.5))
+        fig, ax = plt.subplots(figsize=(7, 3))
+        top_purpose = raw_df["loan_purpose"].value_counts().head(5).index
+        subset = raw_df[raw_df["loan_purpose"].isin(top_purpose)]
+        subset.boxplot(
+            column="loan_amount",
+            by="loan_purpose",
+            ax=ax,
+            grid=False,
+            patch_artist=True,
+            boxprops=dict(facecolor=ORANGE, alpha=0.5),
+        )
         plt.suptitle("")
         ax.set_title("Loan Amount by Loan Purpose (top 5)")
+        ax.set_xlabel("loan_purpose")
+        ax.set_ylabel("loan_amount")
+        # rapikan label x agar tidak timpang tindih
+        ax.set_xticklabels(
+            ax.get_xticklabels(),
+            rotation=20,
+            ha="right",
+            fontsize=8,
+        )
+        fig.tight_layout()
         st.pyplot(fig)
+
 with r6:
     if {"dpd", "address_provinsi"} <= set(raw_df.columns):
         tmp = raw_df.copy()
         tmp["is_late"] = (tmp["dpd"] > 0).astype(int)
-        prov = tmp.groupby("address_provinsi")["is_late"].mean().sort_values().tail(10)
-        plot_bar(prov, "Late Payment Rate by Province (top 10)",
-                 "Province", "Rate", horizontal=True, color=ORANGE)
+        prov = (
+            tmp.groupby("address_provinsi")["is_late"]
+            .mean()
+            .sort_values()
+            .tail(10)
+        )
+        plot_bar(
+            prov,
+            "Late Payment Rate by Province (top 10)",
+            "Province",
+            "Rate",
+            horizontal=True,
+            color=ORANGE,
+        )
 
-# Correlation heatmap
-st.subheader("2.4 Correlation heatmap")
+st.markdown("---")
+
+# 2.5 Correlation heatmap
+st.subheader("2.5 Correlation heatmap")
 
 numcols = raw_df.select_dtypes(include=["number"]).columns
 if len(numcols) > 1:
     corr = raw_df[numcols].corr()
     fig, ax = plt.subplots(figsize=(7, 5))
-    cmap = cm.get_cmap("RdYlGn_r")  # orange-green-like gradient
+    cmap = cm.get_cmap("RdYlGn_r")  # orange–green-like gradient
     im = ax.imshow(corr, cmap=cmap, interpolation="nearest", aspect="auto")
     ax.set_xticks(range(len(corr.columns)))
     ax.set_yticks(range(len(corr.columns)))
@@ -264,6 +345,7 @@ if len(numcols) > 1:
     ax.set_yticklabels(corr.columns)
     ax.set_title("Correlation heatmap (numeric features)")
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    fig.tight_layout()
     st.pyplot(fig)
 else:
     st.info("Not enough numeric columns to compute correlation matrix.")
@@ -315,12 +397,19 @@ with c1:
     ax.set_ylabel("Number of customers")
     for i, v in enumerate(values):
         ax.text(i, v, f"{v:,}", ha="center", va="bottom")
+    fig.tight_layout()
     st.pyplot(fig)
 with c2:
     fig, ax = plt.subplots(figsize=(4, 3))
-    ax.pie(percentages, labels=labels, colors=PALETTE,
-           autopct="%1.1f%%", startangle=90)
+    ax.pie(
+        percentages,
+        labels=labels,
+        colors=PALETTE,
+        autopct="%1.1f%%",
+        startangle=90,
+    )
     ax.axis("equal")
+    fig.tight_layout()
     st.pyplot(fig)
 
 
@@ -338,6 +427,7 @@ if show_feature_importance:
         ax.set_xlabel("Importance")
         ax.set_ylabel("Feature")
         ax.invert_yaxis()
+        fig.tight_layout()
         st.pyplot(fig)
     else:
         st.info("Feature importance not available for this model type.")
@@ -354,6 +444,7 @@ if not final_name.lower().endswith(".csv"):
 
 csv_buf = io.StringIO()
 pred_df.to_csv(csv_buf, index=False)
+
 st.download_button(
     label=f"Download predictions as '{final_name}'",
     data=csv_buf.getvalue().encode("utf-8"),
