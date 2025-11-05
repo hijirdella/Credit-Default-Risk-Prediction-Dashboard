@@ -75,9 +75,9 @@ st.title("Credit Default Prediction Dashboard")
 
 st.markdown(
     """
-This app takes raw payment-level data (combined_df-style),
+This app takes raw payment-level data (combined-style),
 shows exploratory data analysis (EDA), and then runs the
-credit default model you trained in your notebook.
+credit default model.
 """
 )
 
@@ -453,3 +453,4 @@ st.download_button(
 )
 
 st.success("Predictions are ready. Explore above or download as CSV.")
+
