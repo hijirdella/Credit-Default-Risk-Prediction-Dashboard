@@ -1,8 +1,3 @@
-Got it — here’s the refined and professional version of your **`README.md`** without emojis or any mention of Bank Danamon.
-It keeps a formal tone, focuses on your data science and deployment work, and is GitHub-ready.
-
----
-
 ```markdown
 # Credit Default Risk Prediction Dashboard
 
