@@ -22,32 +22,64 @@ import streamlit as st
 import creditdefault as cd  # pakai fungsi yang sudah kamu buat
 
 
-
 # Streamlit page config
-
 st.set_page_config(
     page_title="Credit Default Explorer",
     layout="wide",
 )
 
 
-
-# Helper: clean ID columns for display
-
+# Helper: enforce schema / dtypes
 def clean_id_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Bersihkan dan set tipe data supaya konsisten dengan schema combined_df:
+      - ID -> string
+      - tanggal -> datetime (sebagian UTC)
+      - dpd -> Int64
+      - numeric lain -> float
+    """
     df = df.copy()
-    id_cols = ["customer_id", "application_id", "loan_id", "payment_id"]
+
+    # ID columns as pandas StringDtype
+    id_cols = ["application_id", "customer_id", "loan_id", "payment_id"]
     for col in id_cols:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64").astype(str)
+            df[col] = df[col].astype("string")
+
+    # Numeric columns (float)
+    num_cols = [
+        "loan_amount",
+        "loan_duration",
+        "installment_amount",
+        "paid_amount",
+        "dependent",
+    ]
+    for col in num_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # DPD as nullable integer
     if "dpd" in df.columns:
-        df["dpd"] = pd.to_numeric(df["dpd"], errors="coerce")
+        df["dpd"] = pd.to_numeric(df["dpd"], errors="coerce").astype("Int64")
+
+    # Datetime columns with UTC
+    if "cdate" in df.columns:
+        df["cdate"] = pd.to_datetime(df["cdate"], errors="coerce", utc=True)
+    if "fund_transfer_ts" in df.columns:
+        df["fund_transfer_ts"] = pd.to_datetime(
+            df["fund_transfer_ts"], errors="coerce", utc=True
+        )
+
+    # Datetime columns without timezone
+    for col in ["dob", "due_date", "paid_date"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+
+    # Kolom kategorikal lainnya biarkan apa adanya (object)
     return df
 
 
-
 # Sidebar controls
-
 st.sidebar.title("Settings")
 
 threshold = st.sidebar.slider(
@@ -68,9 +100,7 @@ show_feature_importance = st.sidebar.checkbox(
 )
 
 
-
 # Main title
-
 st.title("Credit Default Prediction Dashboard")
 
 st.markdown(
@@ -82,9 +112,7 @@ credit default model.
 )
 
 
-
 # 1. File uploader
-
 st.header("1. Upload raw payment-level CSV")
 
 uploaded_file = st.file_uploader(
@@ -109,9 +137,7 @@ st.write(f"Shape: {raw_df.shape[0]:,} rows × {raw_df.shape[1]} columns")
 st.dataframe(raw_df.head(), use_container_width=True)
 
 
-
 # 2. Exploratory Data Analysis (≈15 charts)
-
 st.header("2. Exploratory Data Analysis")
 
 # Orange–green palette
@@ -232,7 +258,7 @@ with r2:
             s=10,
         )
         ax.set_title("Installment vs Paid Amount")
-        ax.set_xlabel("installment_amount")
+        ax.set_xlabel("install_amount")
         ax.set_ylabel("paid_amount")
         fig.tight_layout()
         st.pyplot(fig)
@@ -269,7 +295,6 @@ with r4:
         )
         plt.suptitle("")
         ax.set_title("Loan Amount by Marital Status")
-        # rapikan label x
         ax.set_xlabel("marital_status")
         ax.set_ylabel("loan_amount")
         ax.set_xticklabels(
@@ -299,7 +324,6 @@ with r5:
         ax.set_title("Loan Amount by Loan Purpose (top 5)")
         ax.set_xlabel("loan_purpose")
         ax.set_ylabel("loan_amount")
-        # rapikan label x agar tidak timpang tindih
         ax.set_xticklabels(
             ax.get_xticklabels(),
             rotation=20,
@@ -351,9 +375,7 @@ else:
     st.info("Not enough numeric columns to compute correlation matrix.")
 
 
-
 # 3. Run Prediction
-
 st.header("3. Run credit default prediction")
 
 if not os.path.exists(cd.MODEL_FILENAME):
@@ -377,9 +399,7 @@ st.dataframe(pred_df.head(), use_container_width=True)
 st.write(f"Total customers scored: {len(pred_df):,}")
 
 
-
 # 4. Prediction distribution charts
-
 st.subheader("Prediction distribution")
 
 counts = pred_df["pred_default"].value_counts().sort_index()
@@ -413,9 +433,7 @@ with c2:
     st.pyplot(fig)
 
 
-
 # 5. Feature importance
-
 if show_feature_importance:
     st.subheader("Feature importance from the model")
 
@@ -433,9 +451,7 @@ if show_feature_importance:
         st.info("Feature importance not available for this model type.")
 
 
-
 # 6. Download predictions
-
 st.subheader("Download predictions")
 
 final_name = default_output_name.strip()
@@ -453,4 +469,3 @@ st.download_button(
 )
 
 st.success("Predictions are ready. Explore above or download as CSV.")
-
